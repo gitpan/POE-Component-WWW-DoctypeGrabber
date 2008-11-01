@@ -3,7 +3,7 @@ package POE::Component::WWW::DoctypeGrabber;
 use warnings;
 use strict;
 
-our $VERSION = '0.0101';
+our $VERSION = '0.0102';
 
 use POE;
 use base 'POE::Component::NonBlockingWrapper::Base';
@@ -256,9 +256,10 @@ Takes no arguments. Tells the component to shut itself down.
         'page' => 'google.ca',
         'result' => {
             'xml_prolog' => 0,
-            'doctype' => undef,
+            'doctype' => '',
             'non_white_space' => 0,
-            'has_doctype' => 0
+            'has_doctype' => 0,
+            'mime' => 'text/html; charset=UTF-8'
         },
         '_blah' => 'foos'
     };
@@ -299,9 +300,10 @@ If an error occured then the C<error> key will be present describing the reason 
 
     'result' => {
         'xml_prolog' => 0,
-        'doctype' => undef,
+        'doctype' => '',
         'non_white_space' => 0,
-        'has_doctype' => 0
+        'has_doctype' => 0,
+        'mime' => 'text/html'
     },
 
 
