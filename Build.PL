@@ -14,9 +14,14 @@ my $builder = Module::Build->new(
         'POE'                                      => 0.9999,
         'POE::Component::NonBlockingWrapper::Base' => 0.002,
         'WWW::DoctypeGrabber'                      => 0.002,
+        'perl' => '5.006',
     },
+    configure_requires => { 'Module::Build' => 0 },
     add_to_cleanup      => [ 'POE-Component-WWW-DoctypeGrabber-*' ],
     create_makefile_pl => 'traditional',
 );
+if ( $ENV{RELEASE_TESTING} ) {
+    system('pod2text lib/POE/Component/WWW/DoctypeGrabber.pm > README');
+}
 
 $builder->create_build_script();

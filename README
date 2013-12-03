@@ -1,43 +1,302 @@
-POE-Component-WWW-DoctypeGrabber
+NAME
+    POE::Component::WWW::DoctypeGrabber - non-blocking wrapper around
+    WWW::DoctypeGrabber
 
-The module is a non-blocking wrapper around L<WWW::DoctypeGrabber> which provides means to
-grab the doctype from a given webpage along with some other related information.
+SYNOPSIS
+        use strict;
+        use warnings;
 
-INSTALLATION
+        use POE qw(Component::WWW::DoctypeGrabber);
 
-To install this module, run the following commands:
+        my $poco = POE::Component::WWW::DoctypeGrabber->spawn;
 
-	perl Build.PL
-	./Build
-	./Build test
-	./Build install
+        POE::Session->create(
+            package_states => [ main => [qw(_start results)] ],
+        );
 
-SUPPORT AND DOCUMENTATION
+        $poe_kernel->run;
 
-After installing, you can find documentation for this module with the
-perldoc command.
+        sub _start {
+            $poco->grab( {
+                    page  => 'http://zoffix.com',
+                    event => 'results',
+                }
+            );
+        }
 
-    perldoc POE::Component::WWW::DoctypeGrabber
+        sub results {
+            my $in_ref = $_[ARG0];
 
-You can also look for information at:
+            if ( $in_ref->{error} ) {
+                print "ERROR: $in_ref->{error}\n";
+            }
+            else {
+                my $result = $in_ref->{result};
 
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=POE-Component-WWW-DoctypeGrabber
+                print $result->{has_doctype}
+                    ? "$in_ref->{page} has $result->{doctype} doctype\n"
+                    : "$in_ref->{page} does not contain a doctype\n";
 
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/POE-Component-WWW-DoctypeGrabber
+                print $result->{xml_prolog}
+                    ? "Contains XML prolog\n" : "Does not contain XML prolog\n";
 
-    CPAN Ratings
-        http://cpanratings.perl.org/d/POE-Component-WWW-DoctypeGrabber
+                print "Doctype is preceeded by $result->{non_white_space} non-whitespace characters\n";
+                print "\n\n\n";
+            };
 
-    Search CPAN
-        http://search.cpan.org/dist/POE-Component-WWW-DoctypeGrabber
+            $poco->shutdown;
+        }
+
+DESCRIPTION
+    The module is a non-blocking wrapper around WWW::DoctypeGrabber which
+    provides means to grab the doctype from a given webpage along with some
+    other related information.
+
+CONSTRUCTOR
+  "spawn"
+        my $poco = POE::Component::WWW::DoctypeGrabber->spawn;
+
+        POE::Component::WWW::DoctypeGrabber->spawn(
+            alias => 'grabber',
+            obj_args => {
+                raw => 1,
+            },
+            options => {
+                debug => 1,
+                trace => 1,
+                # POE::Session arguments for the component
+            },
+            debug => 1, # output some debug info
+        );
+
+    The "spawn" method returns a POE::Component::WWW::DoctypeGrabber object.
+    It takes a few arguments, *all of which are optional*. The possible
+    arguments are as follows:
+
+   "alias"
+        ->spawn( alias => 'grabber' );
+
+    Optional. Specifies a POE Kernel alias for the component.
+
+   "obj_args"
+        obj_args => {
+            raw => 1,
+        },
+
+    Optional. Takes a hashref as a value. This hashref will be directly
+    dereferenced into WWW::DoctypeGrabber's constructor ("new()" method).
+    See documentation for WWW::DoctypeGrabber for more information.
+
+   "options"
+        ->spawn(
+            options => {
+                trace => 1,
+                default => 1,
+            },
+        );
+
+    Optional. A hashref of POE Session options to pass to the component's
+    session.
+
+   "debug"
+        ->spawn(
+            debug => 1
+        );
+
+    When set to a true value turns on output of debug messages. Defaults to:
+    0.
+
+METHODS
+  "grab"
+        $poco->grab( {
+                event       => 'event_for_output',
+                page        => 'http://zoffix.com/',
+                raw         => 1,
+                _blah       => 'pooh!',
+                session     => 'other',
+            }
+        );
+
+    Takes a hashref as an argument, does not return a sensible return value.
+    See "grab" event's description for more information.
+
+  "session_id"
+        my $poco_id = $poco->session_id;
+
+    Takes no arguments. Returns component's session ID.
+
+  "shutdown"
+        $poco->shutdown;
+
+    Takes no arguments. Shuts down the component.
+
+ACCEPTED EVENTS
+  "grab"
+        $poe_kernel->post( grabber => grab => {
+                event       => 'event_for_output',
+                page        => 'http://zoffix.com',
+                raw         => 1,
+                _blah       => 'pooh!',
+                session     => 'other',
+            }
+        );
+
+    Instructs the component to grab a doctype from a specified page. Takes a
+    hashref as an argument, the possible keys/value of that hashref are as
+    follows:
+
+   "event"
+        { event => 'results_event', }
+
+    Mandatory. Specifies the name of the event to emit when results are
+    ready. See OUTPUT section for more information.
+
+   "page"
+        { page => 'http://zoffix.com/' }
+
+    Mandatory. Specifies the page of which to grab the doctype.
+
+   "raw"
+        { raw => 1 },
+
+    Optional. If specified then WWW::DoctypeGrabber's "raw()" method will be
+    called and the value you specified to the "raw" argument will be passed
+    along as an argument to "raw()" method. Note that this will affect any
+    future "grabs".
+
+   "session"
+        { session => 'other' }
+
+        { session => $other_session_reference }
+
+        { session => $other_session_ID }
+
+    Optional. Takes either an alias, reference or an ID of an alternative
+    session to send output to.
+
+   user defined
+        {
+            _user    => 'random',
+            _another => 'more',
+        }
+
+    Optional. Any keys starting with "_" (underscore) will not affect the
+    component and will be passed back in the result intact.
+
+  "shutdown"
+        $poe_kernel->post( grabber => 'shutdown' );
+
+    Takes no arguments. Tells the component to shut itself down.
+
+OUTPUT
+        $VAR1 = {
+            'page' => 'google.ca',
+            'result' => {
+                'xml_prolog' => 0,
+                'doctype' => '',
+                'non_white_space' => 0,
+                'has_doctype' => 0,
+                'mime' => 'text/html; charset=UTF-8'
+            },
+            '_blah' => 'foos'
+        };
+
+        $VAR1 = {
+            'page' => 'zoffix.com',
+            'raw' => 1,
+            'result' => '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">',
+            '_blah' => 'foos'
+        };
+
+    The event handler set up to handle the event which you've specified in
+    the "event" argument to "grab()" method/event will recieve input in the
+    $_[ARG0] in a form of a hashref. The possible keys/value of that hashref
+    are as follows:
+
+  "page"
+        { page => 'google.ca' }
+
+    The "page" key will contain the same thing you specified for "page"
+    argument in "grab()" event/method.
+
+  "raw"
+        { raw => 1 }
+
+    The "raw" key will contain the same thing you specified for "raw"
+    argument in "grab()" event/method. If you didn't specify anything - it
+    won't be present in the output.
+
+  "error"
+        { error => 'Network error: timeout' }
+
+    If an error occured then the "error" key will be present describing the
+    reason for failure.
+
+  "result"
+        'result' => {
+            'xml_prolog' => 0,
+            'doctype' => '',
+            'non_white_space' => 0,
+            'has_doctype' => 0,
+            'mime' => 'text/html'
+        },
 
 
-COPYRIGHT AND LICENCE
+        'result' => '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">',
 
-Copyright (C) 2008 Zoffix Znet
+    Depending on the setting of "raw" argument the "result" key will either
+    contain a hashref filled with info or the actual doctype. See
+    description of "grab()" method in WWW::DoctypeGrabber's documentation
+    for explanation of all the keys/values in the hashref.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+  user defined
+        { '_blah' => 'foos' }
+
+    Any arguments beginning with "_" (underscore) passed into the "grab()"
+    event/method will be present intact in the result.
+
+SEE ALSO
+    POE, WWW::DoctypeGrabber
+
+AUTHOR
+    Zoffix Znet, "<zoffix at cpan.org>" (<http://zoffix.com/>,
+    <http://haslayout.net/>, <http://zofdesign.com/>)
+
+BUGS
+    Please report any bugs or feature requests to
+    "bug-poe-component-www-doctypegrabber at rt.cpan.org", or through the
+    web interface at
+    <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=POE-Component-WWW-Doctyp
+    eGrabber>. I will be notified, and then you'll automatically be notified
+    of progress on your bug as I make changes.
+
+SUPPORT
+    You can find documentation for this module with the perldoc command.
+
+        perldoc POE::Component::WWW::DoctypeGrabber
+
+    You can also look for information at:
+
+    *   RT: CPAN's request tracker
+
+        <http://rt.cpan.org/NoAuth/Bugs.html?Dist=POE-Component-WWW-DoctypeG
+        rabber>
+
+    *   AnnoCPAN: Annotated CPAN documentation
+
+        <http://annocpan.org/dist/POE-Component-WWW-DoctypeGrabber>
+
+    *   CPAN Ratings
+
+        <http://cpanratings.perl.org/d/POE-Component-WWW-DoctypeGrabber>
+
+    *   Search CPAN
+
+        <http://search.cpan.org/dist/POE-Component-WWW-DoctypeGrabber>
+
+COPYRIGHT & LICENSE
+    Copyright 2008 Zoffix Znet, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
 
